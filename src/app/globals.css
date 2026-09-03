@@ -276,8 +276,8 @@ select {
 
 .notice-box {
   margin: 20px 0;
-  border: 1px solid #f0d78c;
-  background: #fff8df;
+  border: 1px solid #c7d6fa;
+  background: #eef3fe;
   border-radius: 18px;
   padding: 14px 16px;
   color: #5b4515;
@@ -573,10 +573,10 @@ select {
 .disclosure-callout,
 .booking-disclosure-box {
   padding: 18px 20px;
-  background: #fff8df;
-  border: 1px solid #f0d78c;
+  background: #eef3fe;
+  border: 1px solid #c7d6fa;
   border-radius: 14px;
-  color: #5f4700;
+  color: #24409a;
   line-height: 1.6;
 }
 
@@ -586,7 +586,7 @@ select {
 
 .disclosure-callout h2 {
   margin-top: 0;
-  color: #5f4700;
+  color: #24409a;
 }
 
 .disclosure-callout p {
@@ -863,8 +863,8 @@ select {
   margin: 28px auto 0;
   padding: 18px;
   color: #344054;
-  background: #fff8df;
-  border: 1px solid #f0d78c;
+  background: #eef3fe;
+  border: 1px solid #c7d6fa;
   border-radius: 14px;
   text-align: left;
 }
@@ -872,12 +872,12 @@ select {
 .thank-you-note strong {
   display: block;
   margin-bottom: 6px;
-  color: #5f4700;
+  color: #24409a;
 }
 
 .thank-you-note p {
   margin: 0;
-  color: #5f4700;
+  color: #24409a;
   line-height: 1.6;
 }
 
@@ -1150,7 +1150,7 @@ select {
   font-family: "Roboto", sans-serif;
   font-size: 0.9rem;
   font-weight: 700;
-  color: #ffc107;
+  color: #a9c0ff;
   margin-top: 5px;
   letter-spacing: 0;
 }
@@ -1795,7 +1795,7 @@ button,
 
 .ticket-card p {
   margin-top: 5px;
-  color: #ffc107;
+  color: #a9c0ff;
   font-family: "Roboto", sans-serif;
   font-size: 0.9rem;
   font-weight: 700;
@@ -1834,8 +1834,8 @@ button,
   width: 28px;
   height: 28px;
   margin: 10px auto -6px;
-  border-right: 6px solid #b91b2f;
-  border-bottom: 6px solid #b91b2f;
+  border-right: 6px solid #3558c8;
+  border-bottom: 6px solid #3558c8;
   transform: rotate(45deg);
   text-decoration: none;
   transition: transform 0.25s ease, border-color 0.25s ease;
@@ -1843,7 +1843,7 @@ button,
 }
 
 .hero-scroll-arrow:hover {
-  border-color: #e11d48;
+  border-color: #5a7af0;
   transform: rotate(45deg) translate(6px, 6px);
 }
 
@@ -2292,7 +2292,7 @@ body {
 
 .ticket-card p {
   margin: 5px 0 0;
-  color: #ffc107;
+  color: #a9c0ff;
   font-family: "Roboto", sans-serif;
   font-size: 0.9rem;
   font-weight: 700;
@@ -3345,7 +3345,7 @@ body {
 }
 
 .guide-icon-list .text-warning {
-  color: #ffc107;
+  color: #a9c0ff;
 }
 
 .guide-icon-list .text-primary {
