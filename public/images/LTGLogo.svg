@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 84" role="img" aria-label="LouvreTickets logo">
+  <rect width="84" height="84" rx="18" fill="#111827"/>
+  <path d="M18 56h48L42 22 18 56Z" fill="#c9a24a"/>
+  <path d="M26 56h32L42 33 26 56Z" fill="#fff7df" opacity=".9"/>
+  <path d="M22 62h40" stroke="#ffffff" stroke-width="5" stroke-linecap="round"/>
+</svg>
