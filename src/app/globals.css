@@ -52,14 +52,14 @@ a {
 }
 
 :root {
-  --gold: #3f5fbf;
-  --gold-dark: #2c4390;
+  --gold: #3558c8;
+  --gold-dark: #24409a;
   --ink: #172033;
   --muted: #657086;
   --line: #dde4f0;
   --cream: #f3f6fc;
   --paper: #ffffff;
-  --green: #1e7a52;
+  --green: #24409a;
 }
 
 html {
@@ -834,9 +834,9 @@ select {
   justify-content: center;
   margin-bottom: 16px;
   padding: 8px 14px;
-  color: #146c43;
-  background: #ecfdf3;
-  border: 1px solid #bbf7d0;
+  color: #24409a;
+  background: #edf2fe;
+  border: 1px solid #c7d6fa;
   border-radius: 999px;
   font-size: 0.82rem;
   font-weight: 900;
@@ -1316,7 +1316,7 @@ select {
 .ticket-card.selected {
   background: #fff;
   color: #222;
-  border: 2px solid #c51b3a;
+  border: 2px solid #3558c8;
 }
 
 .ticket-dot {
@@ -1327,9 +1327,9 @@ select {
 }
 
 .ticket-card.selected .ticket-dot {
-  background: #c51b3a;
-  border-color: #c51b3a;
-  box-shadow: inset 0 0 0 7px #c51b3a;
+  background: #3558c8;
+  border-color: #3558c8;
+  box-shadow: inset 0 0 0 7px #3558c8;
 }
 
 .ticket-card h3 {
@@ -1373,7 +1373,7 @@ select {
 
 .red-badge {
   display: inline-block;
-  background: #c51b3a;
+  background: #3558c8;
   color: #fff;
   border-radius: 4px;
   padding: 7px 12px;
@@ -1397,7 +1397,7 @@ select {
 
 .included-lines li::before {
   content: "●";
-  color: #c51b3a;
+  color: #3558c8;
   margin-right: 10px;
 }
 
@@ -1489,13 +1489,13 @@ select {
   text-align: center;
   border-radius: 4px;
   border: 0;
-  border-bottom: 3px solid #c51b3a;
+  border-bottom: 3px solid #3558c8;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
 .icon-circle {
   background: transparent;
-  color: #c51b3a;
+  color: #3558c8;
   font-size: 30px;
   width: auto;
   height: auto;
@@ -2414,7 +2414,7 @@ body {
 }
 
 .product-price-disclosure .total strong {
-  color: #198754;
+  color: #3558c8;
   font-size: 1.1rem;
 }
 
@@ -2759,7 +2759,7 @@ body {
 .summary-includes li::before {
   content: "✓";
   margin-right: 8px;
-  color: #198754;
+  color: #3558c8;
   font-weight: 900;
 }
 
@@ -2795,13 +2795,13 @@ body {
   width: 100%;
   min-height: 52px;
   color: #fff;
-  background: #198754;
+  background: #3558c8;
   border: 0;
   border-radius: 12px;
   cursor: pointer;
   font-size: 1.05rem;
   font-weight: 900;
-  box-shadow: 0 10px 20px rgba(25, 135, 84, 0.22);
+  box-shadow: 0 10px 20px rgba(53, 88, 200, 0.22);
 }
 
 .pay-button:disabled {
@@ -2827,7 +2827,7 @@ body {
 .quick-booking-head span {
   display: inline-block;
   margin-bottom: 8px;
-  color: #198754;
+  color: #3558c8;
   font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -2880,9 +2880,9 @@ body {
   place-items: center;
   width: 34px;
   height: 34px;
-  color: #146c43;
-  background: #ecfdf3;
-  border: 1px solid #bbf7d0;
+  color: #24409a;
+  background: #edf2fe;
+  border: 1px solid #c7d6fa;
   border-radius: 999px;
   cursor: pointer;
   font-size: 1.35rem;
@@ -2927,14 +2927,14 @@ body {
 }
 
 .calendar-day:hover:not(:disabled) {
-  border-color: #198754;
+  border-color: #3558c8;
 }
 
 .calendar-day.selected {
   color: #fff;
-  background: #198754;
-  border-color: #198754;
-  box-shadow: 0 6px 14px rgba(25, 135, 84, 0.22);
+  background: #3558c8;
+  border-color: #3558c8;
+  box-shadow: 0 6px 14px rgba(53, 88, 200, 0.22);
 }
 
 .calendar-day:disabled {
@@ -2978,10 +2978,10 @@ body {
 }
 
 .quick-time-grid .slot-button.active {
-  color: #146c43;
-  background: #ecfdf3;
-  border-color: #198754;
-  box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.12);
+  color: #24409a;
+  background: #edf2fe;
+  border-color: #3558c8;
+  box-shadow: 0 0 0 3px rgba(53, 88, 200, 0.12);
 }
 
 .quick-time-grid .slot-button:disabled {
@@ -3045,7 +3045,7 @@ body {
   gap: 10px;
   padding: 16px;
   background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  border: 1px solid #c7d6fa;
   border-radius: 14px;
 }
 
@@ -3057,12 +3057,12 @@ body {
 }
 
 .quick-total-card span {
-  color: #146c43;
+  color: #24409a;
   font-weight: 800;
 }
 
 .quick-total-card strong {
-  color: #198754;
+  color: #3558c8;
   font-size: 1.65rem;
   font-weight: 900;
 }
@@ -3071,14 +3071,14 @@ body {
   display: grid;
   gap: 7px;
   padding-top: 10px;
-  border-top: 1px solid #bbf7d0;
-  color: #146c43;
+  border-top: 1px solid #c7d6fa;
+  color: #24409a;
   font-size: 0.86rem;
 }
 
 .quick-price-breakdown h3 {
   margin: 0 0 8px;
-  color: #146c43;
+  color: #24409a;
   font-size: 0.88rem;
   font-weight: 800;
 }
@@ -3093,7 +3093,7 @@ body {
 
 .quick-price-breakdown span,
 .quick-price-breakdown strong {
-  color: #146c43;
+  color: #24409a;
   font-size: 0.84rem;
   line-height: 1.3;
 }
@@ -3341,7 +3341,7 @@ body {
 }
 
 .guide-icon-list .text-success {
-  color: #198754;
+  color: #3558c8;
 }
 
 .guide-icon-list .text-warning {
@@ -4114,7 +4114,7 @@ body {
 .admin-eyebrow {
   display: inline-block;
   margin-bottom: 8px;
-  color: #198754;
+  color: #3558c8;
   font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -4179,7 +4179,7 @@ body {
 
 .admin-login-form button {
   color: #fff;
-  background: #198754;
+  background: #3558c8;
 }
 
 .admin-secondary-button {
@@ -4268,7 +4268,7 @@ body {
 }
 
 .admin-calendar-day:hover {
-  border-color: #198754;
+  border-color: #3558c8;
 }
 
 .admin-calendar-day.selected {
@@ -4284,9 +4284,9 @@ body {
 }
 
 .admin-calendar-day.open {
-  color: #146c43;
-  background: #ecfdf3;
-  border-color: #bbf7d0;
+  color: #24409a;
+  background: #edf2fe;
+  border-color: #c7d6fa;
 }
 
 .admin-calendar-day.selected.closed,
@@ -4349,7 +4349,7 @@ body {
 }
 
 .admin-time-button:hover {
-  border-color: #198754;
+  border-color: #3558c8;
 }
 
 .admin-time-button.selected {
@@ -4365,9 +4365,9 @@ body {
 }
 
 .admin-time-button.open {
-  color: #146c43;
-  background: #ecfdf3;
-  border-color: #bbf7d0;
+  color: #24409a;
+  background: #edf2fe;
+  border-color: #c7d6fa;
 }
 
 .admin-time-button.selected.closed,
@@ -4384,7 +4384,7 @@ body {
 
 .admin-success-button {
   color: #fff;
-  background: #198754;
+  background: #3558c8;
 }
 
 .admin-dashboard-head {
@@ -4475,8 +4475,8 @@ body {
   width: fit-content;
   margin-top: 8px !important;
   padding: 4px 8px;
-  color: #146c43 !important;
-  background: #ecfdf3;
+  color: #24409a !important;
+  background: #edf2fe;
   border-radius: 999px;
   font-size: 0.72rem !important;
   font-weight: 900;
@@ -4496,8 +4496,8 @@ body {
 }
 
 .admin-open-status {
-  color: #146c43 !important;
-  background: #ecfdf3;
+  color: #24409a !important;
+  background: #edf2fe;
 }
 
 .admin-closed-status {
@@ -4515,9 +4515,9 @@ body {
 
 .admin-success {
   padding: 12px 14px;
-  color: #146c43 !important;
-  background: #ecfdf3;
-  border: 1px solid #bbf7d0;
+  color: #24409a !important;
+  background: #edf2fe;
+  border: 1px solid #c7d6fa;
   border-radius: 10px;
 }
 
@@ -4602,20 +4602,20 @@ body {
 }
 
 .ticket-region-option:hover {
-  border-color: #198754;
-  box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.08);
+  border-color: #3558c8;
+  box-shadow: 0 0 0 3px rgba(53, 88, 200, 0.08);
 }
 
 .ticket-region-option:focus-visible {
   outline: none;
-  border-color: #198754;
-  box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.25);
+  border-color: #3558c8;
+  box-shadow: 0 0 0 3px rgba(53, 88, 200, 0.25);
 }
 
 .ticket-region-option.active {
-  background: #ecfdf3;
-  border-color: #198754;
-  box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.12);
+  background: #edf2fe;
+  border-color: #3558c8;
+  box-shadow: 0 0 0 3px rgba(53, 88, 200, 0.12);
 }
 
 .ticket-region-check {
@@ -4631,8 +4631,8 @@ body {
 }
 
 .ticket-region-option.active .ticket-region-check {
-  border-color: #198754;
-  background: #198754;
+  border-color: #3558c8;
+  background: #3558c8;
 }
 
 .ticket-region-option.active .ticket-region-check::after {
@@ -4655,7 +4655,7 @@ body {
 }
 
 .ticket-region-option.active .ticket-region-label {
-  color: #146c43;
+  color: #24409a;
 }
 
 .ticket-region-note {
