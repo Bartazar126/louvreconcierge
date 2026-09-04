@@ -87,7 +87,7 @@ select {
 }
 
 .top-disclaimer {
-  background: #111827;
+  background: #24409a;
   color: #fff;
   font-size: 13px;
   line-height: 1.5;
@@ -531,7 +531,7 @@ select {
 }
 
 .site-footer {
-  background: #101827;
+  background: #0f1a3d;
   color: #fff;
   padding: 52px 0;
 }
@@ -1184,7 +1184,7 @@ select {
 
 /* Original LouvreTickets visual pass */
 .top-disclaimer {
-  background: #2c3e50;
+  background: #24409a;
   font-size: 11px;
   padding: 5px 0;
   text-align: center;
@@ -1886,7 +1886,7 @@ button,
 
 /* Original export lock: values copied from eredeti/index.html */
 :root {
-  --primary-color: #b91b2f;
+  --primary-color: #3558c8;
   --secondary-color: #2c3e50;
   --light-bg: #f8f9fa;
 }
@@ -3531,9 +3531,9 @@ body {
 
 .site-footer {
   padding: 80px 0 30px;
-  background-color: #0a0a0a;
+  background-color: #0f1a3d;
   border-top: 5px solid var(--primary-color);
-  color: #999;
+  color: #b5c0dc;
   font-size: 0.9rem;
 }
 
@@ -3652,7 +3652,7 @@ body {
   display: block;
   padding: 0.45rem 0;
   color: #fff;
-  background: #2c3e50;
+  background: #24409a;
   font-size: 0.78rem;
   font-weight: 700;
   line-height: 1.45;
