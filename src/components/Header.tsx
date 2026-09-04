@@ -19,12 +19,15 @@ export function Header() {
       <header className="site-header">
         <div className="container header-inner">
           <Link href={prefix || "/"} className="brand" aria-label="LouvreTickets homepage">
-            <strong>LOUVRETICKETS</strong>
+            <span className="brand-text">
+              <strong>LOUVRETICKETS</strong>
+              <span className="brand-byline">by Tourcierge</span>
+            </span>
             <Image
-              src="/images/LTGLogo.png"
+              src="/images/logoLTGnew.png"
               alt="LouvreTickets logo"
-              width={42}
-              height={42}
+              width={50}
+              height={50}
               className="brand-logo"
               priority
             />

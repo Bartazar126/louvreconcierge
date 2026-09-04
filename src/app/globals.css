@@ -4677,3 +4677,21 @@ body {
     min-height: 0;
   }
 }
+
+/* Header brand: stacked wordmark + "by Tourcierge" byline */
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1px;
+  line-height: 1;
+}
+
+.brand-byline {
+  font-size: clamp(0.8rem, 0.56em, 1rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: 0.04em;
+  color: #6f6f6f;
+}
