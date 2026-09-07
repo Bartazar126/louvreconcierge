@@ -82,8 +82,16 @@ export default async function ThankYouPage({ searchParams }: ThankYouPageProps) 
     conversionData = result.conversion;
   } catch (error) {
     fulfillmentError = error instanceof Error ? error.message : "Unable to save order details.";
-    conversionData = await getConversionDataFromSessionId(sessionId);
     console.error("Thank-you order fulfillment failed:", error);
+
+    // A konverzio-lekerdezes is elszallhat (pl. ervenytelen session id) - ezt
+    // kulon kell elkapni, kulonben a hibakezelo maga dobna 500-as oldalt.
+    try {
+      conversionData = await getConversionDataFromSessionId(sessionId);
+    } catch (conversionError) {
+      console.error("Thank-you conversion lookup failed:", conversionError);
+      conversionData = null;
+    }
   }
   if (fulfillmentError) {
     return (
