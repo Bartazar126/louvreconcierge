@@ -1,5 +1,8 @@
 import type Stripe from "stripe";
+import { after } from "next/server";
 import { products as defaultProducts } from "@/data/site";
+import type { OrderEmailComponent, OrderEmailSummary } from "@/lib/email";
+import { sendNewOrderNotification, sendOrderConfirmationEmail } from "@/lib/email";
 import { findProductById } from "@/lib/products";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { getStripeClient } from "@/lib/stripe";
@@ -34,10 +37,15 @@ async function orderExistsForSession(sessionId: string) {
   return Boolean(data?.length);
 }
 
+async function resolveSessionProduct(session: Stripe.Checkout.Session) {
+  const productId = getMetadataValue(session.metadata, "productId");
+
+  return (await findProductById(productId)) ?? defaultProducts.find((item) => item.id === productId);
+}
+
 async function buildOrderRows(session: Stripe.Checkout.Session) {
   const metadata = session.metadata;
-  const productId = getMetadataValue(metadata, "productId");
-  const product = (await findProductById(productId)) ?? defaultProducts.find((item) => item.id === productId);
+  const product = await resolveSessionProduct(session);
 
   if (!product) {
     throw new Error("Checkout session is missing a valid product.");
@@ -170,6 +178,116 @@ function getConversionDataFromSession(session: Stripe.Checkout.Session): Convers
   };
 }
 
+type OrderRow = Awaited<ReturnType<typeof buildOrderRows>>[number];
+
+// A latogatonevek "A:" / "C:" elotaggal tarolodnak (felnott / gyerek).
+function splitVisitorNames(value: string | null | undefined) {
+  const names = (value || "")
+    .split(";")
+    .map((name) => name.trim())
+    .filter(Boolean);
+  const adultNames: string[] = [];
+  const childNames: string[] = [];
+
+  for (const name of names) {
+    const tag = name.slice(0, 2).toLowerCase();
+
+    if (tag === "c:") {
+      childNames.push(name.slice(2).trim());
+    } else if (tag === "a:") {
+      adultNames.push(name.slice(2).trim());
+    } else {
+      adultNames.push(name);
+    }
+  }
+
+  return { adultNames, childNames };
+}
+
+async function lookupOrderReference(sessionId: string) {
+  try {
+    const { data } = await getSupabaseAdmin()
+      .from("orders")
+      .select("order_number")
+      .eq("stripe_session_id", sessionId)
+      .order("order_number", { ascending: true })
+      .limit(1)
+      .returns<Array<{ order_number: number | null }>>();
+    const orderNumber = data?.[0]?.order_number;
+
+    if (typeof orderNumber === "number") {
+      return `#${String(orderNumber).padStart(4, "0")}`;
+    }
+  } catch (error) {
+    console.error("Unable to load order reference:", error);
+  }
+
+  return sessionId;
+}
+
+async function sendOrderEmails(session: Stripe.Checkout.Session, orderRows: OrderRow[]) {
+  const [firstRow] = orderRows;
+  const product = await resolveSessionProduct(session);
+
+  if (!firstRow || !product) {
+    return;
+  }
+
+  const components: OrderEmailComponent[] = orderRows.map((row) => ({
+    label: row.order_type,
+    visitDate: row.visit_date,
+    visitTime: row.visit_time,
+    adults: row.adult_count,
+    youth: row.youth_count,
+    children: row.child_count,
+    infants: row.infant_count,
+    amount: Number(row.amount) || 0,
+  }));
+  const { adultNames, childNames } = splitVisitorNames(firstRow.visitor_names);
+  const totalAmount =
+    typeof session.amount_total === "number"
+      ? session.amount_total / 100
+      : components.reduce((sum, component) => sum + component.amount, 0);
+
+  const summary: OrderEmailSummary = {
+    customerName: firstRow.customer_name,
+    email: firstRow.email,
+    productName: product.name,
+    productAddress: product.address,
+    productDuration: product.duration,
+    ticketRegion: firstRow.ticket_region,
+    adultNames,
+    childNames,
+    components,
+    totalAmount,
+    currency: (session.currency || "eur").toUpperCase(),
+    reference: await lookupOrderReference(session.id),
+  };
+
+  await Promise.allSettled([
+    sendOrderConfirmationEmail(summary),
+    sendNewOrderNotification(summary),
+  ]);
+}
+
+// A leveleket a valasz elkuldese utan kuldjuk ki, hogy ne lassitsak a
+// koszono oldalt, es egy SMTP hiba se akadalyozza meg a rendeles rogziteset.
+function scheduleOrderEmails(session: Stripe.Checkout.Session, orderRows: OrderRow[]) {
+  const task = async () => {
+    try {
+      await sendOrderEmails(session, orderRows);
+    } catch (error) {
+      console.error("Order confirmation email failed:", error);
+    }
+  };
+
+  try {
+    after(task);
+  } catch {
+    void task();
+  }
+}
+
 export async function fulfillOrderFromStripeSession(session: Stripe.Checkout.Session) {
   if (session.payment_status !== "paid" || session.status !== "complete") {
     return { ok: false as const, reason: "unpaid" as const };
@@ -215,6 +333,8 @@ export async function fulfillOrderFromStripeSession(session: Stripe.Checkout.Ses
       throw new Error(legacyError.message);
     }
   }
+
+  scheduleOrderEmails(session, orderRows);
 
   return {
     ok: true as const,

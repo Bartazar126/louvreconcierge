@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // A nodemailer natív Node modulokat használ, ezért nem szabad bundle-özni.
+  serverExternalPackages: ["nodemailer"],
   images: {
     remotePatterns: [
       {

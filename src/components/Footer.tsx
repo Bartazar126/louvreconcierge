@@ -32,7 +32,6 @@ export function Footer() {
           <Link href="/#blog">Travel Blog</Link>
           <Link href="/faq">FAQ</Link>
           <Link href="/about">About Us</Link>
-          <a href="https://www.facebook.com/profile.php?id=61585921262449">Facebook</a>
         </div>
         <div>
           <h3>Support</h3>
