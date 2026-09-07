@@ -28,10 +28,39 @@ export type Product = {
   faceValue: number;
   eGuideFee: number;
   serviceFee: number;
+  // Kulon Non-EU arak. Ha nincs megadva, a Non-EU jegy az alap (EU) arat viszi.
+  nonEuFaceValue?: number | null;
+  nonEuEGuideFee?: number | null;
+  nonEuServiceFee?: number | null;
   includes: string[];
   comboExtraComponent?: "eiffel" | "seine";
   comboExtraName?: string;
 };
+
+export type TicketPriceRegion = "eu" | "non_eu";
+
+// A kivalasztott jegytipus arait teszi a termek alap ar-mezoibe, igy minden
+// tovabbi arszamitas (egyszeru es kombo is) valtozatlanul mukodik.
+export function applyTicketRegionPrices(product: Product, region?: string | null): Product {
+  if (region !== "non_eu") {
+    return product;
+  }
+
+  return {
+    ...product,
+    faceValue: typeof product.nonEuFaceValue === "number" ? product.nonEuFaceValue : product.faceValue,
+    eGuideFee: typeof product.nonEuEGuideFee === "number" ? product.nonEuEGuideFee : product.eGuideFee,
+    serviceFee: typeof product.nonEuServiceFee === "number" ? product.nonEuServiceFee : product.serviceFee,
+  };
+}
+
+export function hasSeparateNonEuPrice(product: Product) {
+  return (
+    typeof product.nonEuFaceValue === "number" ||
+    typeof product.nonEuEGuideFee === "number" ||
+    typeof product.nonEuServiceFee === "number"
+  );
+}
 
 export type ParticipantCounts = {
   adults: number;

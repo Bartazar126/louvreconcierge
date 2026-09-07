@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EU_TICKET_FEATURE_ENABLED, TicketRegion } from "@/data/features";
 import { Locale, ui } from "@/data/i18n";
 import {
+  applyTicketRegionPrices,
   business,
   getComboBookingTotal,
   getComboExtraPaidVisitors,
@@ -243,8 +244,10 @@ export function BookingWidget({
     calendarMonth.getFullYear() > parisTodayYear ||
     (calendarMonth.getFullYear() === parisTodayYear &&
       calendarMonth.getMonth() + 1 > parisTodayMonth);
-  const unitPrice = getProductUnitPrice(product);
-  const comboExtraUnitPrice = getComboExtraUnitPrice(product);
+  // A kivalasztott jegytipus (EU / Non-EU) arai - azonnal atarazza a foglalot.
+  const pricedProduct = applyTicketRegionPrices(product, ticketRegion || null);
+  const unitPrice = getProductUnitPrice(pricedProduct);
+  const comboExtraUnitPrice = getComboExtraUnitPrice(pricedProduct);
   const louvreCalendarDays = createCalendarDays(louvreCalendarMonth);
   const extraCalendarDays = createCalendarDays(extraCalendarMonth);
   const selectedDate = new Date(`${date}T00:00:00`);
@@ -307,12 +310,12 @@ export function BookingWidget({
   const total = useMemo(
     () => isCombo
       ? getComboBookingTotal(
-          product,
+          pricedProduct,
           { adults: louvreAdults, children: louvreChildren },
           { adults: extraAdults, youth: isEiffelCombo ? extraYouth : 0, children: extraChildren, infants: isEiffelCombo ? extraInfants : 0 },
         )
       : adults * unitPrice,
-    [adults, extraAdults, extraChildren, extraInfants, extraYouth, isCombo, isEiffelCombo, louvreAdults, louvreChildren, product, unitPrice],
+    [adults, extraAdults, extraChildren, extraInfants, extraYouth, isCombo, isEiffelCombo, louvreAdults, louvreChildren, pricedProduct, unitPrice],
   );
   const closedAvailability = useClosedSlotSet(!isCombo ? productIdForAvailability : null, date);
   const louvreClosedAvailability = useClosedSlotSet(
@@ -803,7 +806,7 @@ export function BookingWidget({
             <div className="quick-row">
               <div>
                 <strong>Adult</strong>
-                <small>EUR {product.faceValue.toFixed(2)} {copy.each}</small>
+                <small>EUR {pricedProduct.faceValue.toFixed(2)} {copy.each}</small>
               </div>
               <div className="quantity-control">
                 <button type="button" onClick={() => setLouvreAdults(Math.max(1, louvreAdults - 1))} aria-label="Remove Louvre adult">-</button>
@@ -920,7 +923,7 @@ export function BookingWidget({
               <h3>{copy.breakdown}</h3>
               <div>
                 <span>Louvre adult</span>
-                <strong>EUR {product.faceValue.toFixed(2)} x {louvreAdults}</strong>
+                <strong>EUR {pricedProduct.faceValue.toFixed(2)} x {louvreAdults}</strong>
               </div>
               <div>
                 <span>{product.comboExtraName || "Combo component"}</span>
@@ -1120,15 +1123,15 @@ export function BookingWidget({
             <h3>{copy.breakdown}</h3>
             <div>
               <span>{copy.faceValue}</span>
-              <strong>EUR {product.faceValue.toFixed(2)} x {payingVisitors}</strong>
+              <strong>EUR {pricedProduct.faceValue.toFixed(2)} x {payingVisitors}</strong>
             </div>
             <div>
               <span>{copy.eGuideFee}</span>
-              <strong>EUR {product.eGuideFee.toFixed(2)} x {payingVisitors}</strong>
+              <strong>EUR {pricedProduct.eGuideFee.toFixed(2)} x {payingVisitors}</strong>
             </div>
             <div>
               <span>{copy.serviceFee}</span>
-              <strong>EUR {product.serviceFee.toFixed(2)} x {payingVisitors}</strong>
+              <strong>EUR {pricedProduct.serviceFee.toFixed(2)} x {payingVisitors}</strong>
             </div>
             <div>
               <span>{copy.childrenLabel}</span>

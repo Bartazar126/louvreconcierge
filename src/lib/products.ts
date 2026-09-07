@@ -7,6 +7,10 @@ export type ProductPriceRow = {
   face_value: number;
   eguide_fee: number;
   service_fee: number;
+  // Non-EU arak: null = a termek a Non-EU jegynel is az EU arat hasznalja.
+  face_value_non_eu: number | null;
+  eguide_fee_non_eu: number | null;
+  service_fee_non_eu: number | null;
   updated_at: string;
 };
 
@@ -23,7 +27,28 @@ export function isPriceOverrideRow(override: { visit_date: string; visit_time: s
   return override.visit_date === PRICE_OVERRIDE_DATE && override.visit_time === PRICE_OVERRIDE_TIME;
 }
 
-type StoredPriceRow = Pick<ProductPriceRow, "product_id" | "face_value" | "eguide_fee" | "service_fee">;
+type StoredPriceRow = Pick<
+  ProductPriceRow,
+  | "product_id"
+  | "face_value"
+  | "eguide_fee"
+  | "service_fee"
+  | "face_value_non_eu"
+  | "eguide_fee_non_eu"
+  | "service_fee_non_eu"
+>;
+
+// null / undefined / ures ertek -> null (nincs kulon Non-EU ar).
+// Fontos: Number(null) === 0 lenne, ezert kell a kulon ellenorzes.
+function optionalPrice(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : null;
+}
 
 function parsePriceNote(note: string | null) {
   if (!note) {
@@ -35,6 +60,9 @@ function parsePriceNote(note: string | null) {
       face_value?: number;
       eguide_fee?: number;
       service_fee?: number;
+      face_value_non_eu?: number | null;
+      eguide_fee_non_eu?: number | null;
+      service_fee_non_eu?: number | null;
     };
 
     if (
@@ -89,6 +117,9 @@ async function getProductPriceMapFromOverrides() {
       face_value: parsed.face_value as number,
       eguide_fee: parsed.eguide_fee as number,
       service_fee: parsed.service_fee as number,
+      face_value_non_eu: optionalPrice(parsed.face_value_non_eu),
+      eguide_fee_non_eu: optionalPrice(parsed.eguide_fee_non_eu),
+      service_fee_non_eu: optionalPrice(parsed.service_fee_non_eu),
     });
   }
 
@@ -178,6 +209,9 @@ export async function saveProductPrices(rows: ProductPriceRow[]) {
           face_value: row.face_value,
           eguide_fee: row.eguide_fee,
           service_fee: row.service_fee,
+          face_value_non_eu: row.face_value_non_eu,
+          eguide_fee_non_eu: row.eguide_fee_non_eu,
+          service_fee_non_eu: row.service_fee_non_eu,
           updated_at: row.updated_at,
         })),
         { onConflict: "product_id" },
@@ -203,6 +237,9 @@ export async function saveProductPrices(rows: ProductPriceRow[]) {
           face_value: row.face_value,
           eguide_fee: row.eguide_fee,
           service_fee: row.service_fee,
+          face_value_non_eu: row.face_value_non_eu,
+          eguide_fee_non_eu: row.eguide_fee_non_eu,
+          service_fee_non_eu: row.service_fee_non_eu,
         }),
         updated_at: row.updated_at,
       })),
@@ -226,6 +263,9 @@ function applyPrices(product: Product, priceRow?: StoredPriceRow) {
     faceValue: Number(priceRow.face_value),
     eGuideFee: Number(priceRow.eguide_fee),
     serviceFee: Number(priceRow.service_fee),
+    nonEuFaceValue: optionalPrice(priceRow.face_value_non_eu),
+    nonEuEGuideFee: optionalPrice(priceRow.eguide_fee_non_eu),
+    nonEuServiceFee: optionalPrice(priceRow.service_fee_non_eu),
   };
 }
 
@@ -274,6 +314,9 @@ export async function getProductPricesForAdmin(): Promise<{
           face_value: row ? Number(row.face_value) : product.faceValue,
           eguide_fee: row ? Number(row.eguide_fee) : product.eGuideFee,
           service_fee: row ? Number(row.service_fee) : product.serviceFee,
+          face_value_non_eu: optionalPrice(row?.face_value_non_eu),
+          eguide_fee_non_eu: optionalPrice(row?.eguide_fee_non_eu),
+          service_fee_non_eu: optionalPrice(row?.service_fee_non_eu),
           updated_at: new Date().toISOString(),
         };
       }),
@@ -289,6 +332,9 @@ export async function getProductPricesForAdmin(): Promise<{
         face_value: product.faceValue,
         eguide_fee: product.eGuideFee,
         service_fee: product.serviceFee,
+        face_value_non_eu: null,
+        eguide_fee_non_eu: null,
+        service_fee_non_eu: null,
         updated_at: new Date().toISOString(),
       })),
     };

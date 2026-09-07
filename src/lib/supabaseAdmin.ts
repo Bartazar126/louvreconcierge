@@ -48,6 +48,10 @@ export type ProductPriceRow = {
   face_value: number;
   eguide_fee: number;
   service_fee: number;
+  // Non-EU arak: null = a Non-EU jegy is az EU arat viszi.
+  face_value_non_eu: number | null;
+  eguide_fee_non_eu: number | null;
+  service_fee_non_eu: number | null;
   updated_at: string;
 };
 

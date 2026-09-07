@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { getProductUnitPrice } from "@/data/site";
 import { ProductPriceRow } from "@/lib/supabaseAdmin";
 import { updateProductPrices } from "./actions";
 
@@ -16,6 +15,10 @@ type AdminProductPricesProps = {
   productPrices: ProductPriceRow[];
   disabled?: boolean;
 };
+
+function sumPrice(faceValue: number, eGuideFee: number, serviceFee: number) {
+  return faceValue + eGuideFee + serviceFee;
+}
 
 export function AdminProductPrices({ products, productPrices, disabled = false }: AdminProductPricesProps) {
   const router = useRouter();
@@ -43,11 +46,15 @@ export function AdminProductPrices({ products, productPrices, disabled = false }
 
   return (
     <form action={handleSubmit} className="admin-prices-form">
+      <p className="admin-price-hint">
+        Leave a Non-EU field empty to charge the EU price for Non-EU tickets as well.
+      </p>
       <div className="admin-table-wrap">
         <table className="admin-orders-table admin-prices-table">
           <thead>
             <tr>
               <th>Product</th>
+              <th>Ticket type</th>
               <th>Face value (EUR)</th>
               <th>E-guide fee (EUR)</th>
               <th>Service fee (EUR)</th>
@@ -60,62 +67,106 @@ export function AdminProductPrices({ products, productPrices, disabled = false }
               const faceValue = prices?.face_value ?? 0;
               const eGuideFee = prices?.eguide_fee ?? 0;
               const serviceFee = prices?.service_fee ?? 0;
-              const total = getProductUnitPrice({
-                id: product.id,
-                name: product.name,
-                badge: "",
-                summary: "",
-                description: "",
-                duration: "",
-                address: "",
-                heroImage: "",
-                faceValue,
-                eGuideFee,
-                serviceFee,
-                includes: [],
-              });
+              const nonEuFaceValue = prices?.face_value_non_eu ?? null;
+              const nonEuEGuideFee = prices?.eguide_fee_non_eu ?? null;
+              const nonEuServiceFee = prices?.service_fee_non_eu ?? null;
+              const euTotal = sumPrice(faceValue, eGuideFee, serviceFee);
+              const nonEuTotal = sumPrice(
+                nonEuFaceValue ?? faceValue,
+                nonEuEGuideFee ?? eGuideFee,
+                nonEuServiceFee ?? serviceFee,
+              );
+              const usesEuFallback =
+                nonEuFaceValue === null && nonEuEGuideFee === null && nonEuServiceFee === null;
 
               return (
-                <tr key={product.id}>
-                  <td>
-                    <strong>{product.name}</strong>
-                    <span>{product.id}</span>
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      name={`${product.id}-faceValue`}
-                      defaultValue={faceValue}
-                      min="0"
-                      step="0.01"
-                      required
-                      disabled={disabled}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      name={`${product.id}-eGuideFee`}
-                      defaultValue={eGuideFee}
-                      min="0"
-                      step="0.01"
-                      required
-                      disabled={disabled}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      name={`${product.id}-serviceFee`}
-                      defaultValue={serviceFee}
-                      min="0"
-                      step="0.01"
-                      required
-                      disabled={disabled}
-                    />
-                  </td>
-                  <td className="admin-price-total">EUR {total.toFixed(2)}</td>
-                </tr>
+                <Fragment key={product.id}>
+                  <tr key={`${product.id}-eu`}>
+                    <td rowSpan={2}>
+                      <strong>{product.name}</strong>
+                      <span>{product.id}</span>
+                    </td>
+                    <td>
+                      <span className="admin-price-region">EU</span>
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        name={`${product.id}-faceValue`}
+                        defaultValue={faceValue}
+                        min="0"
+                        step="0.01"
+                        required
+                        disabled={disabled}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        name={`${product.id}-eGuideFee`}
+                        defaultValue={eGuideFee}
+                        min="0"
+                        step="0.01"
+                        required
+                        disabled={disabled}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        name={`${product.id}-serviceFee`}
+                        defaultValue={serviceFee}
+                        min="0"
+                        step="0.01"
+                        required
+                        disabled={disabled}
+                      />
+                    </td>
+                    <td className="admin-price-total">EUR {euTotal.toFixed(2)}</td>
+                  </tr>
+                  <tr key={`${product.id}-non-eu`}>
+                    <td>
+                      <span className="admin-price-region">Non-EU</span>
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        name={`${product.id}-faceValueNonEu`}
+                        defaultValue={nonEuFaceValue ?? ""}
+                        placeholder={String(faceValue)}
+                        min="0"
+                        step="0.01"
+                        disabled={disabled}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        name={`${product.id}-eGuideFeeNonEu`}
+                        defaultValue={nonEuEGuideFee ?? ""}
+                        placeholder={String(eGuideFee)}
+                        min="0"
+                        step="0.01"
+                        disabled={disabled}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        name={`${product.id}-serviceFeeNonEu`}
+                        defaultValue={nonEuServiceFee ?? ""}
+                        placeholder={String(serviceFee)}
+                        min="0"
+                        step="0.01"
+                        disabled={disabled}
+                      />
+                    </td>
+                    <td className="admin-price-total">
+                      EUR {nonEuTotal.toFixed(2)}
+                      {usesEuFallback ? <span className="admin-price-note">same as EU</span> : null}
+                    </td>
+                  </tr>
+                </Fragment>
               );
             })}
           </tbody>

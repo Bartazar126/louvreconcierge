@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import { randomUUID } from "node:crypto";
 import {
+  applyTicketRegionPrices,
   getComboComponentAmount,
   getComboExtraUnitPrice,
   getProductUnitPrice,
@@ -295,16 +296,19 @@ export async function POST(request: Request) {
     );
   }
 
-  const unitAmount = toStripeAmount(getProductUnitPrice(product));
+  // Az arat MINDIG a szerver dontii el a valasztott jegytipus alapjan - a
+  // kliens csak az EU / Non-EU valasztast kuldi, arat nem.
+  const pricedProduct = applyTicketRegionPrices(product, ticketRegion);
+  const unitAmount = toStripeAmount(getProductUnitPrice(pricedProduct));
   const origin = getOrigin(request);
   const customerName = `${firstName} ${lastName}`;
   const comboGroupId = isCombo ? randomUUID() : null;
-  const comboExtraUnitPrice = getComboExtraUnitPrice(product);
+  const comboExtraUnitPrice = getComboExtraUnitPrice(pricedProduct);
   const louvreAmount = isCombo
-    ? getComboComponentAmount(product, "louvre", { adults: louvreAdults, children: louvreChildren })
+    ? getComboComponentAmount(pricedProduct, "louvre", { adults: louvreAdults, children: louvreChildren })
     : 0;
   const extraAmount = isCombo && product.comboExtraComponent
-    ? getComboComponentAmount(product, product.comboExtraComponent, {
+    ? getComboComponentAmount(pricedProduct, product.comboExtraComponent, {
         adults: extraAdults,
         youth: product.comboExtraComponent === "eiffel" ? extraYouth : 0,
         children: extraChildren,
@@ -322,7 +326,7 @@ export async function POST(request: Request) {
                 quantity: louvreAdults,
                 price_data: {
                   currency: "eur",
-                  unit_amount: toStripeAmount(product.faceValue),
+                  unit_amount: toStripeAmount(pricedProduct.faceValue),
                   product_data: {
                     name: "Louvre Museum component",
                     description: `${product.name} · Louvre component`,
@@ -394,9 +398,9 @@ export async function POST(request: Request) {
         customerName,
         phone,
         locale: body.locale || "en",
-        ticketFaceValue: product.faceValue.toFixed(2),
-        eGuideFee: product.eGuideFee.toFixed(2),
-        serviceFee: product.serviceFee.toFixed(2),
+        ticketFaceValue: pricedProduct.faceValue.toFixed(2),
+        eGuideFee: pricedProduct.eGuideFee.toFixed(2),
+        serviceFee: pricedProduct.serviceFee.toFixed(2),
         ...(EU_TICKET_FEATURE_ENABLED && isTicketRegion(ticketRegion)
           ? {
               ticketRegion,

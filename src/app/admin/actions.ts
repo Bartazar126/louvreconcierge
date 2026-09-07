@@ -58,6 +58,19 @@ function getPrice(formData: FormData, key: string) {
   return Number.isFinite(value) && value >= 0 ? value : null;
 }
 
+// Ures mezo -> null (nincs kulon Non-EU ar, az EU ar ervenyes).
+function getOptionalPrice(formData: FormData, key: string) {
+  const raw = getString(formData, key).trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const value = Number.parseFloat(raw);
+
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
 export async function loginAdmin(formData: FormData) {
   if (!isAdminPassword(formData.get("password"))) {
     redirect("/admin?error=1");
@@ -205,11 +218,15 @@ export async function updateProductPrices(formData: FormData): Promise<ActionRes
       return null;
     }
 
+    // A Non-EU mezok elhagyhatok: ures mezo = az EU arat hasznaljuk.
     return {
       product_id: product.id,
       face_value: faceValue,
       eguide_fee: eGuideFee,
       service_fee: serviceFee,
+      face_value_non_eu: getOptionalPrice(formData, `${product.id}-faceValueNonEu`),
+      eguide_fee_non_eu: getOptionalPrice(formData, `${product.id}-eGuideFeeNonEu`),
+      service_fee_non_eu: getOptionalPrice(formData, `${product.id}-serviceFeeNonEu`),
       updated_at: new Date().toISOString(),
     };
   });
@@ -224,6 +241,9 @@ export async function updateProductPrices(formData: FormData): Promise<ActionRes
       face_value: number;
       eguide_fee: number;
       service_fee: number;
+      face_value_non_eu: number | null;
+      eguide_fee_non_eu: number | null;
+      service_fee_non_eu: number | null;
       updated_at: string;
     }>);
   } catch (error) {

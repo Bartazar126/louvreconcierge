@@ -4695,3 +4695,27 @@ body {
   letter-spacing: 0.04em;
   color: #6f6f6f;
 }
+
+/* Admin: EU / Non-EU arak */
+.admin-price-hint {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.admin-price-region {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: #eef3fe;
+  color: #24409a;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.admin-price-note {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--muted);
+}
