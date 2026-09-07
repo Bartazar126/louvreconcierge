@@ -16,11 +16,11 @@ export const metadata: Metadata = {
     `Independent Louvre ticket reseller and digital e-guide service operated by ${business.legalName}.`,
   icons: {
     icon: [
-      { url: "/favicon.ico?v=3", type: "image/x-icon" },
-      { url: "/favicon.png?v=3", type: "image/png" },
+      { url: "/favicon.ico?v=4", type: "image/x-icon" },
+      { url: "/favicon.png?v=4", type: "image/png" },
     ],
-    shortcut: "/favicon.ico?v=3",
-    apple: "/favicon.png?v=3",
+    shortcut: "/favicon.ico?v=4",
+    apple: "/favicon.png?v=4",
   },
   openGraph: {
     title: "Louvre Tickets & E-Guide Service",
