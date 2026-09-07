@@ -5,7 +5,7 @@ import { getProductPricesForAdmin } from "@/lib/products";
 import { ADMIN_COOKIE_NAME, isAdminSessionValue } from "@/lib/adminAuth";
 import { AvailabilityOverrideRow, getSupabaseAdmin, OrderRow } from "@/lib/supabaseAdmin";
 import { AdminAvailabilityCalendar } from "./AdminAvailabilityCalendar";
-import { AdminOrderSummary } from "./AdminOrderSummary";
+import { AdminOrderSummary, type SummaryOrder } from "./AdminOrderSummary";
 import { AdminProductPrices } from "./AdminProductPrices";
 import { loginAdmin, logoutAdmin } from "./actions";
 export const dynamic = "force-dynamic";
@@ -32,38 +32,82 @@ const BASE_ORDER_COLUMNS =
   "id, order_number, combo_group_id, combo_component, created_at, customer_name, email, phone, visit_date, visit_time, order_type, product_id, adults, children, adult_count, youth_count, child_count, infant_count, amount, currency, status, stripe_session_id";
 const EU_TICKET_ORDER_COLUMNS = `${BASE_ORDER_COLUMNS}, ticket_region, visitor_names`;
 
+// A forgalmi osszesitohoz csak ez a nehany mezo kell - toredeke a teljes sornak.
+const SUMMARY_ORDER_COLUMNS =
+  "created_at, product_id, order_type, adult_count, youth_count, child_count, infant_count, amount, currency, status, stripe_session_id";
+
+// A tablazatban a legutobbi rendelesek latszanak; a teljes lista a LTG
+// programban erheto el. 6000+ sor kirendereleese percekig tartana.
+const ORDERS_TABLE_LIMIT = 200;
+
 async function fetchAllOrders(selectColumns: string) {
   const pageSize = 1000;
   const supabase = getSupabaseAdmin();
-  const orders: OrderRow[] = [];
-  let from = 0;
 
-  // Supabase/PostgREST caps a single response at 1000 rows by default.
-  // Without pagination the admin summary silently undercounts revenue.
-  while (true) {
-    const { data, error } = await supabase
-      .from("orders")
-      .select(selectColumns)
-      .not("stripe_session_id", "is", null)
-      .order("created_at", { ascending: false })
-      .range(from, from + pageSize - 1)
-      .returns<OrderRow[]>();
+  // Supabase/PostgREST egy keresben max 1000 sort ad vissza. Eloszor
+  // megkerdezzuk a darabszamot, majd az osszes lapot PARHUZAMOSAN toltjuk -
+  // igy nem 7 egymas utani korbe telik a betoltes.
+  const { count, error: countError } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .not("stripe_session_id", "is", null);
 
-    if (error) {
-      throw new Error(error.message);
+  if (countError) {
+    throw new Error(countError.message);
+  }
+
+  const total = count ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const pages = await Promise.all(
+    Array.from({ length: pageCount }, (_, index) =>
+      supabase
+        .from("orders")
+        .select(selectColumns)
+        .not("stripe_session_id", "is", null)
+        .order("created_at", { ascending: false })
+        .range(index * pageSize, index * pageSize + pageSize - 1)
+        .returns<SummaryOrder[]>(),
+    ),
+  );
+
+  const orders: SummaryOrder[] = [];
+
+  for (const page of pages) {
+    if (page.error) {
+      throw new Error(page.error.message);
     }
 
-    const page = data ?? [];
-    orders.push(...page);
-
-    if (page.length < pageSize) {
-      break;
-    }
-
-    from += pageSize;
+    orders.push(...(page.data ?? []));
   }
 
   return orders;
+}
+
+async function getSummaryOrders() {
+  try {
+    return { orders: await fetchAllOrders(SUMMARY_ORDER_COLUMNS), error: "" };
+  } catch (error) {
+    return {
+      orders: [] as SummaryOrder[],
+      error: error instanceof Error ? error.message : "Unable to load orders.",
+    };
+  }
+}
+
+async function fetchRecentOrders(selectColumns: string) {
+  const { data, error } = await getSupabaseAdmin()
+    .from("orders")
+    .select(selectColumns)
+    .not("stripe_session_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(ORDERS_TABLE_LIMIT)
+    .returns<OrderRow[]>();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data ?? [];
 }
 
 async function getOrders() {
@@ -71,7 +115,7 @@ async function getOrders() {
     // Prefer the EU ticket columns; fall back to the original column list if
     // the migration has not been applied (or was reverted).
     try {
-      return { orders: await fetchAllOrders(EU_TICKET_ORDER_COLUMNS), error: "" };
+      return { orders: await fetchRecentOrders(EU_TICKET_ORDER_COLUMNS), error: "" };
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
 
@@ -79,7 +123,7 @@ async function getOrders() {
         throw error;
       }
 
-      return { orders: await fetchAllOrders(BASE_ORDER_COLUMNS), error: "" };
+      return { orders: await fetchRecentOrders(BASE_ORDER_COLUMNS), error: "" };
     }
   } catch (error) {
     return {
@@ -314,10 +358,17 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
     return <LoginPanel hasError={params?.error === "1"} />;
   }
 
-  const params = await searchParams;
-  const { orders, error } = await getOrders();
-  const { availabilityOverrides, error: availabilityLoadError } = await getAvailabilityOverrides();
-  const productPriceState = await getProductPricesForAdmin();
+  // Minden lekerdezes parhuzamosan fut, kulonben egymasra varnak.
+  const [params, { orders, error }, summaryState, availabilityState, productPriceState] =
+    await Promise.all([
+      searchParams,
+      getOrders(),
+      getSummaryOrders(),
+      getAvailabilityOverrides(),
+      getProductPricesForAdmin(),
+    ]);
+  const { orders: summaryOrders, error: summaryError } = summaryState;
+  const { availabilityOverrides, error: availabilityLoadError } = availabilityState;
 
   return (
     <main className="admin-page">
@@ -333,7 +384,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           </form>
         </div>
         {error ? <p className="admin-error">Unable to load orders: {error}</p> : null}
-        <AdminOrderSummary orders={orders} />
+        <AdminOrderSummary orders={summaryOrders} />
       </section>
       <PricesPanel
         productPrices={productPriceState.rows}
@@ -350,7 +401,10 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
           <div>
             <span className="admin-eyebrow">Orders</span>
             <h2>Incoming Bookings</h2>
-            <p>Incoming booking requests from the checkout flow.</p>
+            <p>
+              Latest {ORDERS_TABLE_LIMIT} bookings from the checkout flow. The sales summary above
+              covers every order.
+            </p>
           </div>
         </div>
         <OrdersTable orders={orders} />
