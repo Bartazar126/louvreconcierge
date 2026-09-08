@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { products } from "@/data/site";
+import { getParisDateKey } from "@/lib/bookingTime";
 import { getProductPricesForAdmin } from "@/lib/products";
 import { ADMIN_COOKIE_NAME, isAdminSessionValue } from "@/lib/adminAuth";
 import { AvailabilityOverrideRow, getSupabaseAdmin, OrderRow } from "@/lib/supabaseAdmin";
 import { AdminAvailabilityCalendar } from "./AdminAvailabilityCalendar";
-import { AdminOrderSummary, type SummaryOrder } from "./AdminOrderSummary";
+import { AdminOrderSummary } from "./AdminOrderSummary";
 import { AdminProductPrices } from "./AdminProductPrices";
 import { loginAdmin, logoutAdmin } from "./actions";
 export const dynamic = "force-dynamic";
@@ -21,6 +23,7 @@ export const metadata: Metadata = {
 type AdminPageProps = {
   searchParams?: Promise<{
     error?: string;
+    view?: string;
     availabilityError?: string;
     availabilityUpdated?: string;
     pricesError?: string;
@@ -32,67 +35,9 @@ const BASE_ORDER_COLUMNS =
   "id, order_number, combo_group_id, combo_component, created_at, customer_name, email, phone, visit_date, visit_time, order_type, product_id, adults, children, adult_count, youth_count, child_count, infant_count, amount, currency, status, stripe_session_id";
 const EU_TICKET_ORDER_COLUMNS = `${BASE_ORDER_COLUMNS}, ticket_region, visitor_names`;
 
-// A forgalmi osszesitohoz csak ez a nehany mezo kell - toredeke a teljes sornak.
-const SUMMARY_ORDER_COLUMNS =
-  "created_at, product_id, order_type, adult_count, youth_count, child_count, infant_count, amount, currency, status, stripe_session_id";
-
 // A tablazatban a legutobbi rendelesek latszanak; a teljes lista a LTG
 // programban erheto el. 6000+ sor kirendereleese percekig tartana.
 const ORDERS_TABLE_LIMIT = 200;
-
-async function fetchAllOrders(selectColumns: string) {
-  const pageSize = 1000;
-  const supabase = getSupabaseAdmin();
-
-  // Supabase/PostgREST egy keresben max 1000 sort ad vissza. Eloszor
-  // megkerdezzuk a darabszamot, majd az osszes lapot PARHUZAMOSAN toltjuk -
-  // igy nem 7 egymas utani korbe telik a betoltes.
-  const { count, error: countError } = await supabase
-    .from("orders")
-    .select("id", { count: "exact", head: true })
-    .not("stripe_session_id", "is", null);
-
-  if (countError) {
-    throw new Error(countError.message);
-  }
-
-  const total = count ?? 0;
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-  const pages = await Promise.all(
-    Array.from({ length: pageCount }, (_, index) =>
-      supabase
-        .from("orders")
-        .select(selectColumns)
-        .not("stripe_session_id", "is", null)
-        .order("created_at", { ascending: false })
-        .range(index * pageSize, index * pageSize + pageSize - 1)
-        .returns<SummaryOrder[]>(),
-    ),
-  );
-
-  const orders: SummaryOrder[] = [];
-
-  for (const page of pages) {
-    if (page.error) {
-      throw new Error(page.error.message);
-    }
-
-    orders.push(...(page.data ?? []));
-  }
-
-  return orders;
-}
-
-async function getSummaryOrders() {
-  try {
-    return { orders: await fetchAllOrders(SUMMARY_ORDER_COLUMNS), error: "" };
-  } catch (error) {
-    return {
-      orders: [] as SummaryOrder[],
-      error: error instanceof Error ? error.message : "Unable to load orders.",
-    };
-  }
-}
 
 async function fetchRecentOrders(selectColumns: string) {
   const { data, error } = await getSupabaseAdmin()
@@ -135,18 +80,48 @@ async function getOrders() {
 
 async function getAvailabilityOverrides() {
   try {
-    const { data, error } = await getSupabaseAdmin()
-      .from("product_availability_overrides")
-      .select("id, created_at, updated_at, product_id, combo_component, visit_date, visit_time, is_closed, note")
-      .order("visit_date", { ascending: true })
-      .order("visit_time", { ascending: true })
-      .returns<AvailabilityOverrideRow[]>();
+    const supabase = getSupabaseAdmin();
+    const today = getParisDateKey();
+    const pageSize = 1000;
+    const columns =
+      "id, created_at, updated_at, product_id, combo_component, visit_date, visit_time, is_closed, note";
+    const baseQuery = () =>
+      supabase
+        .from("product_availability_overrides")
+        .select(columns)
+        .gte("visit_date", today)
+        .neq("visit_time", "__price__");
 
-    if (error) {
-      return { availabilityOverrides: [], error: error.message };
+    const { count, error: countError } = await supabase
+      .from("product_availability_overrides")
+      .select("id", { count: "exact", head: true })
+      .gte("visit_date", today)
+      .neq("visit_time", "__price__");
+
+    if (countError) {
+      return { availabilityOverrides: [], error: countError.message };
     }
 
-    return { availabilityOverrides: data ?? [], error: "" };
+    const pageCount = Math.max(1, Math.ceil((count ?? 0) / pageSize));
+    const pages = await Promise.all(
+      Array.from({ length: pageCount }, (_, index) =>
+        baseQuery()
+          .order("visit_date", { ascending: true })
+          .order("visit_time", { ascending: true })
+          .range(index * pageSize, index * pageSize + pageSize - 1)
+          .returns<AvailabilityOverrideRow[]>(),
+      ),
+    );
+    const availabilityOverrides: AvailabilityOverrideRow[] = [];
+
+    for (const page of pages) {
+      if (page.error) {
+        return { availabilityOverrides: [], error: page.error.message };
+      }
+      availabilityOverrides.push(...(page.data ?? []));
+    }
+
+    return { availabilityOverrides, error: "" };
   } catch (error) {
     return {
       availabilityOverrides: [],
@@ -178,10 +153,6 @@ function formatOrderId(order: OrderRow) {
 
 function formatComboId(order: OrderRow) {
   return order.combo_group_id ? order.combo_group_id.slice(0, 8) : "-";
-}
-
-function getProductName(productId: string) {
-  return products.find((product) => product.id === productId)?.name || productId;
 }
 
 function formatVisitorNames(value: string) {
@@ -289,12 +260,10 @@ function OrdersTable({ orders }: { orders: OrderRow[] }) {
 function PricesPanel({
   productPrices,
   tableReady,
-  storage,
   hasError,
 }: {
   productPrices: Awaited<ReturnType<typeof getProductPricesForAdmin>>["rows"];
   tableReady: boolean;
-  storage: Awaited<ReturnType<typeof getProductPricesForAdmin>>["storage"];
   hasError: boolean;
 }) {
   return (
@@ -335,11 +304,12 @@ function AvailabilityPanel({
         <div>
           <span className="admin-eyebrow">Availability</span>
           <h2>Close or Open Dates</h2>
-          <p>Manage full-day and time-slot availability per product. Combo products can be closed per component (Louvre, Eiffel, Seine). Paris timezone is used for dates.</p>
+          <p>Manage full-day and time-slot availability per product. A full-day closure replaces older time-slot exceptions for the same selection. Paris timezone is used for dates.</p>
         </div>
       </div>
 
       <AdminAvailabilityCalendar
+        key={availabilityOverrides.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, "")}
         products={products.map((product) => ({ id: product.id, name: product.name }))}
         availabilityOverrides={availabilityOverrides}
       />
@@ -349,66 +319,111 @@ function AvailabilityPanel({
   );
 }
 
+type AdminView = "overview" | "availability" | "pricing" | "orders";
+
+const adminViews: Array<{ id: AdminView; label: string; hint: string }> = [
+  { id: "overview", label: "Overview", hint: "Sales totals" },
+  { id: "availability", label: "Availability", hint: "Dates and times" },
+  { id: "pricing", label: "Pricing", hint: "Product prices" },
+  { id: "orders", label: "Orders", hint: "Recent bookings" },
+];
+
+function getAdminView(value?: string): AdminView {
+  return adminViews.some((view) => view.id === value) ? (value as AdminView) : "overview";
+}
+
+function AdminHeader({ activeView }: { activeView: AdminView }) {
+  return (
+    <header className="admin-app-header">
+      <div className="admin-app-header-inner">
+        <div className="admin-app-brand">
+          <span className="admin-app-mark">TC</span>
+          <div><strong>TourCierge</strong><small>Operations</small></div>
+        </div>
+        <nav className="admin-app-nav" aria-label="Admin sections">
+          {adminViews.map((view) => (
+            <Link
+              key={view.id}
+              href={view.id === "overview" ? "/admin" : `/admin?view=${view.id}`}
+              className={activeView === view.id ? "active" : ""}
+              prefetch={false}
+            >
+              <strong>{view.label}</strong>
+              <small>{view.hint}</small>
+            </Link>
+          ))}
+        </nav>
+        <form action={logoutAdmin}>
+          <button type="submit" className="admin-header-signout">Sign out</button>
+        </form>
+      </div>
+    </header>
+  );
+}
+
 export default async function AdminPage({ searchParams }: AdminPageProps) {
   const cookieStore = await cookies();
   const isAuthenticated = isAdminSessionValue(cookieStore.get(ADMIN_COOKIE_NAME)?.value);
+  const params = await searchParams;
 
   if (!isAuthenticated) {
-    const params = await searchParams;
     return <LoginPanel hasError={params?.error === "1"} />;
   }
 
-  // Minden lekerdezes parhuzamosan fut, kulonben egymasra varnak.
-  const [params, { orders, error }, summaryState, availabilityState, productPriceState] =
-    await Promise.all([
-      searchParams,
-      getOrders(),
-      getSummaryOrders(),
-      getAvailabilityOverrides(),
-      getProductPricesForAdmin(),
-    ]);
-  const { orders: summaryOrders, error: summaryError } = summaryState;
-  const { availabilityOverrides, error: availabilityLoadError } = availabilityState;
+  const activeView = getAdminView(params?.view);
+  let panel: React.ReactNode;
 
-  return (
-    <main className="admin-page">
-      <section className="admin-dashboard admin-summary-dashboard">
-        <div className="admin-dashboard-head">
-          <div>
-            <span className="admin-eyebrow">E-Guide</span>
-            <h1>Sales Summary</h1>
-            <p>Paid orders, tickets sold, and revenue by purchase date.</p>
-          </div>
-          <form action={logoutAdmin}>
-            <button type="submit" className="admin-secondary-button">Sign out</button>
-          </form>
-        </div>
-        {error ? <p className="admin-error">Unable to load orders: {error}</p> : null}
-        <AdminOrderSummary orders={summaryOrders} />
-      </section>
+  if (activeView === "availability") {
+    const { availabilityOverrides, error } = await getAvailabilityOverrides();
+    panel = (
+      <AvailabilityPanel
+        availabilityOverrides={availabilityOverrides}
+        hasError={params?.availabilityError === "1" || Boolean(error)}
+      />
+    );
+  } else if (activeView === "pricing") {
+    const productPriceState = await getProductPricesForAdmin();
+    panel = (
       <PricesPanel
         productPrices={productPriceState.rows}
         tableReady={productPriceState.tableReady}
-        storage={productPriceState.storage}
         hasError={params?.pricesError === "1"}
       />
-      <AvailabilityPanel
-        availabilityOverrides={availabilityOverrides}
-        hasError={params?.availabilityError === "1" || Boolean(availabilityLoadError)}
-      />
+    );
+  } else if (activeView === "orders") {
+    const { orders, error } = await getOrders();
+    panel = (
       <section className="admin-dashboard admin-orders-panel">
         <div className="admin-dashboard-head">
           <div>
             <span className="admin-eyebrow">Orders</span>
-            <h2>Incoming Bookings</h2>
-            <p>
-              Latest {ORDERS_TABLE_LIMIT} bookings from the checkout flow. The sales summary above
-              covers every order.
-            </p>
+            <h1>Recent bookings</h1>
+            <p>Latest {ORDERS_TABLE_LIMIT} checkout records. Use Overview for sales totals.</p>
           </div>
         </div>
+        {error ? <p className="admin-error">Unable to load orders: {error}</p> : null}
         <OrdersTable orders={orders} />
       </section>
+    );
+  } else {
+    panel = (
+      <section className="admin-dashboard admin-summary-dashboard">
+        <div className="admin-dashboard-head">
+          <div>
+            <span className="admin-eyebrow">Today at a glance</span>
+            <h1>Sales overview</h1>
+            <p>Choose a purchase period to review paid orders, tickets and revenue.</p>
+          </div>
+        </div>
+        <AdminOrderSummary />
+      </section>
+    );
+  }
+
+  return (
+    <main className="admin-page">
+      <AdminHeader activeView={activeView} />
+      <div className="admin-workspace">{panel}</div>
     </main>
   );
 }

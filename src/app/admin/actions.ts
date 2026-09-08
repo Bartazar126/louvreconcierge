@@ -38,14 +38,6 @@ async function isAdminAuthenticated() {
   return isAdminSessionValue(cookieStore.get(ADMIN_COOKIE_NAME)?.value);
 }
 
-async function requireAdmin() {
-  const cookieStore = await cookies();
-
-  if (!isAdminSessionValue(cookieStore.get(ADMIN_COOKIE_NAME)?.value)) {
-    redirect("/admin?error=1");
-  }
-}
-
 function getString(formData: FormData, key: string) {
   const value = formData.get(key);
 
@@ -69,6 +61,21 @@ function getOptionalPrice(formData: FormData, key: string) {
   const value = Number.parseFloat(raw);
 
   return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function isValidVisitDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }
 
 export async function loginAdmin(formData: FormData) {
@@ -103,7 +110,7 @@ export async function setAvailabilityOverride(formData: FormData): Promise<Actio
   const selectedProduct = products.find((product) => product.id === productId);
   const isValidProduct = Boolean(selectedProduct);
   const isValidTime = visitTime === "*" || timeSlots.includes(visitTime);
-  const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(visitDate);
+  const isValidDate = isValidVisitDate(visitDate);
   const isValidComponent =
     comboComponent === COMBO_COMPONENT_ALL ||
     (selectedProduct ? isValidComboAvailabilityComponent(selectedProduct, comboComponent) : false);
@@ -167,6 +174,23 @@ export async function setAvailabilityOverride(formData: FormData): Promise<Actio
       }
     }
   } else {
+    // A teljes napi zárolás felülír minden korábbi, ugyanarra a termékre,
+    // komponensre és napra vonatkozó idősáv-kivételt. Enélkül egy régi
+    // "open" sor nyitva hagyhatna egy idősávot, miközben a nap zártnak látszik.
+    if (visitTime === "*") {
+      const { error: clearError } = await supabase
+        .from("product_availability_overrides")
+        .delete()
+        .eq("product_id", productId)
+        .eq("combo_component", comboComponent)
+        .eq("visit_date", visitDate);
+
+      if (clearError) {
+        console.error("Availability override clear failed:", clearError);
+        return { ok: false, error: "Unable to update availability." };
+      }
+    }
+
     const { error } = await supabase
       .from("product_availability_overrides")
       .upsert(

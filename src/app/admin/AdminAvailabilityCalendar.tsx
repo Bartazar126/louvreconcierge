@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { products, timeSlots } from "@/data/site";
 import { applyAvailabilityOpenToOverrides } from "@/lib/availabilityAdmin";
 import {
@@ -44,6 +45,30 @@ function formatDateKey(value: Date) {
   const day = String(value.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function formatSelectedDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00`));
+}
+
+function isValidDateKey(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }
 
 function createCalendarDays(monthDate: Date) {
@@ -111,6 +136,33 @@ function applyAvailabilityChange(
     );
   }
 
+  if (change.visitTime === "*") {
+    const withoutPreviousSelection = overrides.filter(
+      (override) =>
+        !(
+          override.product_id === change.productId &&
+          normalizeComboComponent(override.combo_component) === change.comboComponent &&
+          override.visit_date === change.visitDate
+        ),
+    );
+    const timestamp = new Date().toISOString();
+
+    return [
+      ...withoutPreviousSelection,
+      {
+        id: `local-${change.productId}-${change.comboComponent}-${change.visitDate}-${change.visitTime}`,
+        created_at: timestamp,
+        updated_at: timestamp,
+        product_id: change.productId,
+        combo_component: change.comboComponent,
+        visit_date: change.visitDate,
+        visit_time: change.visitTime,
+        is_closed: true,
+        note: change.note,
+      },
+    ];
+  }
+
   const existing = overrides.find(matches);
   const timestamp = new Date().toISOString();
 
@@ -147,6 +199,7 @@ export function AdminAvailabilityCalendar({
   products: productOptions,
   availabilityOverrides,
 }: AdminAvailabilityCalendarProps) {
+  const router = useRouter();
   const parisToday = getParisDateKey();
   const [localOverrides, setLocalOverrides] = useState(availabilityOverrides);
   const [uiReady, setUiReady] = useState(false);
@@ -186,33 +239,20 @@ export function AdminAvailabilityCalendar({
   }, [activeComponent, comboOptions]);
 
   useEffect(() => {
-    setLocalOverrides(availabilityOverrides);
-  }, [availabilityOverrides]);
+    const timer = window.setTimeout(() => {
+      const stored = readStoredUi();
 
-  useEffect(() => {
-    const stored = readStoredUi();
+      if (stored?.productId && productOptions.some((product) => product.id === stored.productId)) {
+        setProductId(stored.productId);
+      }
+      if (stored?.comboComponent) setComboComponent(stored.comboComponent);
+      if (stored?.selectedDate) setSelectedDate(stored.selectedDate);
+      if (stored?.visitTime) setVisitTime(stored.visitTime);
+      if (stored?.calendarMonth) setCalendarMonth(new Date(`${stored.calendarMonth}T12:00:00`));
+      setUiReady(true);
+    }, 0);
 
-    if (stored?.productId && productOptions.some((product) => product.id === stored.productId)) {
-      setProductId(stored.productId);
-    }
-
-    if (stored?.comboComponent) {
-      setComboComponent(stored.comboComponent);
-    }
-
-    if (stored?.selectedDate) {
-      setSelectedDate(stored.selectedDate);
-    }
-
-    if (stored?.visitTime) {
-      setVisitTime(stored.visitTime);
-    }
-
-    if (stored?.calendarMonth) {
-      setCalendarMonth(new Date(`${stored.calendarMonth}T12:00:00`));
-    }
-
-    setUiReady(true);
+    return () => window.clearTimeout(timer);
   }, [productOptions]);
 
   useEffect(() => {
@@ -245,6 +285,15 @@ export function AdminAvailabilityCalendar({
     setComboComponent(nextOptions?.[0]?.id || COMBO_COMPONENT_ALL);
   };
 
+  const handleDateChange = (nextDate: string) => {
+    if (!isValidDateKey(nextDate) || nextDate < parisToday) {
+      return;
+    }
+
+    setSelectedDate(nextDate);
+    setCalendarMonth(new Date(`${nextDate}T12:00:00`));
+  };
+
   const handleSubmit = (formData: FormData) => {
     setMessage("");
     setError("");
@@ -257,6 +306,7 @@ export function AdminAvailabilityCalendar({
       if (result.ok && result.change) {
         setLocalOverrides((current) => applyAvailabilityChange(current, result.change!));
         setMessage(intent === "open" ? "Selection opened." : "Selection closed.");
+        router.refresh();
         return;
       }
 
@@ -305,7 +355,7 @@ export function AdminAvailabilityCalendar({
             </label>
           ) : null}
           <label>
-            Note
+            Internal note
             <input type="text" name="note" placeholder="Optional internal note" />
           </label>
         </div>
@@ -316,7 +366,33 @@ export function AdminAvailabilityCalendar({
           </p>
         ) : null}
 
-        <div className="admin-calendar-card">
+        <div className="admin-selection-bar">
+          <label>
+            Visit date
+            <input
+              type="date"
+              value={selectedDate}
+              min={parisToday}
+              onChange={(event) => handleDateChange(event.target.value)}
+            />
+          </label>
+          <div className="admin-selection-summary">
+            <span>Editing</span>
+            <strong>{getProductName(productId)}</strong>
+            <small>{componentLabel || "All availability"}</small>
+          </div>
+          <button
+            type="button"
+            className="admin-text-button"
+            onClick={() => handleDateChange(parisToday)}
+            disabled={selectedDate === parisToday}
+          >
+            Go to today
+          </button>
+        </div>
+
+        <div className="admin-schedule-grid">
+          <div className="admin-calendar-card">
           <div className="admin-calendar-head">
             <button type="button" onClick={() => changeCalendarMonth(-1)} aria-label="Previous month">
               ‹
@@ -363,15 +439,16 @@ export function AdminAvailabilityCalendar({
               );
             })}
           </div>
-        </div>
+          </div>
 
-        <div className="admin-selected-date">
-          Selected date: <strong>{selectedDate}</strong>
-          {visitTime === "*" ? " · Full day" : ` · ${visitTime}`}
-          {componentLabel ? ` · ${componentLabel}` : ""}
-        </div>
+          <div className="admin-schedule-side">
+            <div className="admin-selected-date" aria-live="polite">
+              Selected: <strong>{formatSelectedDate(selectedDate)}</strong>
+              {visitTime === "*" ? " · Full day" : ` · ${visitTime}`}
+              {componentLabel ? ` · ${componentLabel}` : ""}
+            </div>
 
-        <div className="admin-time-card">
+            <div className="admin-time-card">
           <div className="admin-time-card-head">
             <strong>Select time</strong>
             <span>{visitTime === "*" ? "Full day" : visitTime}</span>
@@ -403,19 +480,21 @@ export function AdminAvailabilityCalendar({
               );
             })}
           </div>
+            </div>
+          </div>
         </div>
 
         <div className="admin-availability-actions">
           <button type="submit" name="intent" value="close" className="admin-danger-button" disabled={isPending}>
-            {isPending ? "Saving..." : "Close Selection"}
+            {isPending ? "Saving..." : "Close selected availability"}
           </button>
           <button type="submit" name="intent" value="open" className="admin-success-button" disabled={isPending}>
-            {isPending ? "Saving..." : "Open Selection"}
+            {isPending ? "Saving..." : "Open selected availability"}
           </button>
         </div>
 
-        {message ? <p className="admin-success">{message}</p> : null}
-        {error ? <p className="admin-error">{error}</p> : null}
+        {message ? <p className="admin-success" role="status">{message}</p> : null}
+        {error ? <p className="admin-error" role="alert">{error}</p> : null}
       </form>
 
       {visibleOverrides.length === 0 ? (

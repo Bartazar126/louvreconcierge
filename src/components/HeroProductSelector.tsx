@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Product, getProductUnitPrice } from "@/data/site";
 
-const defaultHeroImage = "/hero-bg.webp";
+const defaultHeroImage = "/images/hero-bg.webp";
 
 type HeroProductSelectorProps = {
   activeProduct: Product | null;

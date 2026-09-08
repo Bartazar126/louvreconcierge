@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { products } from "@/data/site";
 import { getParisDateKey } from "@/lib/bookingTime";
 
@@ -18,10 +18,6 @@ export type SummaryOrder = {
   stripe_session_id: string | null;
 };
 
-type AdminOrderSummaryProps = {
-  orders: SummaryOrder[];
-};
-
 type ProductBreakdownRow = {
   productId: string;
   label: string;
@@ -34,42 +30,15 @@ type ProductBreakdownRow = {
   revenue: number;
 };
 
-type IndexedOrder = SummaryOrder & {
-  purchaseDate: string;
-};
-
 const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function getDefaultRange() {
   const today = getParisDateKey();
-  const monthStart = `${today.slice(0, 7)}-01`;
-
-  return {
-    from: monthStart,
-    to: today,
-  };
+  return { from: `${today.slice(0, 7)}-01`, to: today };
 }
 
 function isValidDateKey(value: string) {
-  if (!DATE_KEY_PATTERN.test(value)) {
-    return false;
-  }
-
-  const date = new Date(`${value}T00:00:00`);
-  return !Number.isNaN(date.getTime());
-}
-
-function getParisOrderDate(createdAt: string) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Europe/Paris",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(createdAt));
-}
-
-function getTicketCount(order: SummaryOrder) {
-  return order.adult_count + order.youth_count + order.child_count + order.infant_count;
+  return DATE_KEY_PATTERN.test(value) && !Number.isNaN(new Date(`${value}T00:00:00`).getTime());
 }
 
 function formatAmount(amount: number, currency: string) {
@@ -80,68 +49,81 @@ function formatAmount(amount: number, currency: string) {
 }
 
 function formatRangeLabel(from: string, to: string) {
-  if (!isValidDateKey(from) || !isValidDateKey(to)) {
-    return "Select a valid date range";
-  }
-
   const formatter = new Intl.DateTimeFormat("en-GB", {
     year: "numeric",
     month: "short",
     day: "2-digit",
   });
-
-  return `${formatter.format(new Date(`${from}T00:00:00`))} – ${formatter.format(new Date(`${to}T00:00:00`))}`;
+  return `${formatter.format(new Date(`${from}T00:00:00`))} - ${formatter.format(new Date(`${to}T00:00:00`))}`;
 }
 
 function getProductName(productId: string, orderType: string) {
   return products.find((product) => product.id === productId)?.name || orderType || productId;
 }
 
-export function AdminOrderSummary({ orders }: AdminOrderSummaryProps) {
-  const defaults = getDefaultRange();
+async function fetchSummaryOrders(from: string, to: string, signal?: AbortSignal) {
+  const params = new URLSearchParams({ from, to });
+  const response = await fetch(`/admin/api/order-summary?${params.toString()}`, {
+    signal,
+    cache: "no-store",
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Unable to load sales summary.");
+  return Array.isArray(result.orders) ? (result.orders as SummaryOrder[]) : [];
+}
+
+export function AdminOrderSummary() {
+  const defaults = useMemo(() => getDefaultRange(), []);
   const [fromDate, setFromDate] = useState(defaults.from);
   const [toDate, setToDate] = useState(defaults.to);
-  const deferredFromDate = useDeferredValue(fromDate);
-  const deferredToDate = useDeferredValue(toDate);
+  const [activeRange, setActiveRange] = useState(defaults);
+  const [orders, setOrders] = useState<SummaryOrder[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Index purchase dates once so date typing doesn't reformat thousands of timestamps.
-  const indexedOrders = useMemo<IndexedOrder[]>(
-    () =>
-      orders.map((order) => ({
-        ...order,
-        purchaseDate: getParisOrderDate(order.created_at),
-      })),
-    [orders],
-  );
+  const loadSummary = async (from: string, to: string) => {
+    setIsLoading(true);
+    setError("");
+    try {
+      setOrders(await fetchSummaryOrders(from, to));
+      setActiveRange({ from, to });
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Unable to load sales summary.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchSummaryOrders(defaults.from, defaults.to, controller.signal)
+      .then((rows) => {
+        setOrders(rows);
+        setActiveRange(defaults);
+      })
+      .catch((loadError) => {
+        if (loadError instanceof DOMException && loadError.name === "AbortError") return;
+        setError(loadError instanceof Error ? loadError.message : "Unable to load sales summary.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setIsLoading(false);
+      });
+    return () => controller.abort();
+  }, [defaults]);
 
   const summary = useMemo(() => {
-    const rangeStart = isValidDateKey(deferredFromDate) ? deferredFromDate : defaults.from;
-    const rawEnd = isValidDateKey(deferredToDate) ? deferredToDate : defaults.to;
-    const rangeEnd = rawEnd >= rangeStart ? rawEnd : rangeStart;
-
-    const filtered = indexedOrders.filter((order) => {
-      if (order.status !== "paid" || !order.stripe_session_id) {
-        return false;
-      }
-
-      return order.purchaseDate >= rangeStart && order.purchaseDate <= rangeEnd;
-    });
-
     const checkoutIds = new Set(
-      filtered.map((order) => order.stripe_session_id).filter((value): value is string => Boolean(value)),
+      orders.map((order) => order.stripe_session_id).filter((value): value is string => Boolean(value)),
     );
-
-    const adults = filtered.reduce((total, order) => total + order.adult_count, 0);
-    const youth = filtered.reduce((total, order) => total + order.youth_count, 0);
-    const children = filtered.reduce((total, order) => total + order.child_count, 0);
-    const infants = filtered.reduce((total, order) => total + order.infant_count, 0);
-    const tickets = adults + youth + children + infants;
-    const revenue = filtered.reduce((total, order) => total + Number(order.amount), 0);
-    const currency = filtered[0]?.currency || "EUR";
-
+    const adults = orders.reduce((total, order) => total + order.adult_count, 0);
+    const youth = orders.reduce((total, order) => total + order.youth_count, 0);
+    const children = orders.reduce((total, order) => total + order.child_count, 0);
+    const infants = orders.reduce((total, order) => total + order.infant_count, 0);
+    const revenue = orders.reduce((total, order) => total + Number(order.amount), 0);
+    const currency = orders[0]?.currency || "EUR";
     const byProduct = new Map<string, ProductBreakdownRow>();
 
-    for (const order of filtered) {
+    for (const order of orders) {
       const current = byProduct.get(order.product_id) ?? {
         productId: order.product_id,
         label: getProductName(order.product_id, order.order_type),
@@ -153,130 +135,83 @@ export function AdminOrderSummary({ orders }: AdminOrderSummaryProps) {
         tickets: 0,
         revenue: 0,
       };
-
       current.orders += 1;
       current.adults += order.adult_count;
       current.youth += order.youth_count;
       current.children += order.child_count;
       current.infants += order.infant_count;
-      current.tickets += getTicketCount(order);
+      current.tickets += order.adult_count + order.youth_count + order.child_count + order.infant_count;
       current.revenue += Number(order.amount);
       byProduct.set(order.product_id, current);
     }
 
     return {
-      rangeStart,
-      rangeEnd,
       checkoutCount: checkoutIds.size,
-      orderLines: filtered.length,
+      orderLines: orders.length,
       adults,
       youth,
       children,
       infants,
-      tickets,
+      tickets: adults + youth + children + infants,
       revenue,
       currency,
       breakdown: [...byProduct.values()].sort((left, right) => right.orders - left.orders),
     };
-  }, [defaults.from, defaults.to, deferredFromDate, deferredToDate, indexedOrders]);
+  }, [orders]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!isValidDateKey(fromDate) || !isValidDateKey(toDate) || fromDate > toDate) {
+      setError("Select a valid date range.");
+      return;
+    }
+    void loadSummary(fromDate, toDate);
+  };
 
   return (
-    <section className="admin-summary-panel">
-      <div className="admin-summary-form">
+    <section className="admin-summary-panel" aria-busy={isLoading}>
+      <form className="admin-summary-form" onSubmit={handleSubmit}>
         <label>
           Purchase from
-          <input
-            type="date"
-            value={fromDate}
-            max={isValidDateKey(toDate) ? toDate : undefined}
-            onChange={(event) => setFromDate(event.target.value)}
-          />
+          <input type="date" value={fromDate} max={toDate} onChange={(event) => setFromDate(event.target.value)} />
         </label>
         <label>
           Purchase to
-          <input
-            type="date"
-            value={toDate}
-            min={isValidDateKey(fromDate) ? fromDate : undefined}
-            onChange={(event) => setToDate(event.target.value)}
-          />
+          <input type="date" value={toDate} min={fromDate} onChange={(event) => setToDate(event.target.value)} />
         </label>
-      </div>
+        <button type="submit" className="admin-primary-button" disabled={isLoading}>
+          {isLoading ? "Loading..." : "Update summary"}
+        </button>
+      </form>
 
       <p className="admin-summary-range">
-        Showing paid orders by <strong>purchase date</strong> (when checkout completed), between{" "}
-        <strong>{formatRangeLabel(summary.rangeStart, summary.rangeEnd)}</strong> — not by visit date.
+        Paid orders by purchase date: <strong>{formatRangeLabel(activeRange.from, activeRange.to)}</strong>
       </p>
+      {error ? <p className="admin-error" role="alert">{error}</p> : null}
 
-      <div className="admin-summary-stats admin-summary-stats-wide">
-        <article className="admin-summary-stat">
-          <span>Orders received</span>
-          <strong>{summary.checkoutCount}</strong>
-          <small>
-            {summary.orderLines} booking line{summary.orderLines === 1 ? "" : "s"} in database
-          </small>
-        </article>
-        <article className="admin-summary-stat">
-          <span>Adult tickets</span>
-          <strong>{summary.adults}</strong>
-          <small>Paid adult entries</small>
-        </article>
-        <article className="admin-summary-stat">
-          <span>Youth tickets</span>
-          <strong>{summary.youth}</strong>
-          <small>12–24 age band where applicable</small>
-        </article>
-        <article className="admin-summary-stat">
-          <span>Child tickets</span>
-          <strong>{summary.children}</strong>
-          <small>Child entries</small>
-        </article>
-        <article className="admin-summary-stat">
-          <span>Infant tickets</span>
-          <strong>{summary.infants}</strong>
-          <small>Infant entries where applicable</small>
-        </article>
-        <article className="admin-summary-stat">
-          <span>Revenue</span>
-          <strong>{formatAmount(summary.revenue, summary.currency)}</strong>
-          <small>{summary.tickets} tickets total in range</small>
-        </article>
+      <div className={`admin-summary-stats admin-summary-stats-wide${isLoading ? " is-loading" : ""}`}>
+        <article className="admin-summary-stat"><span>Orders</span><strong>{summary.checkoutCount}</strong><small>{summary.orderLines} booking lines</small></article>
+        <article className="admin-summary-stat"><span>Adult tickets</span><strong>{summary.adults}</strong><small>Paid adult entries</small></article>
+        <article className="admin-summary-stat"><span>Youth tickets</span><strong>{summary.youth}</strong><small>12-24 where applicable</small></article>
+        <article className="admin-summary-stat"><span>Child tickets</span><strong>{summary.children}</strong><small>Child entries</small></article>
+        <article className="admin-summary-stat"><span>Infant tickets</span><strong>{summary.infants}</strong><small>Infant entries</small></article>
+        <article className="admin-summary-stat"><span>Revenue</span><strong>{formatAmount(summary.revenue, summary.currency)}</strong><small>{summary.tickets} tickets total</small></article>
       </div>
 
-      {summary.breakdown.length === 0 ? (
+      {!isLoading && summary.breakdown.length === 0 ? (
         <p className="admin-empty">No paid orders in this date range.</p>
-      ) : (
+      ) : summary.breakdown.length > 0 ? (
         <div className="admin-table-wrap">
           <table className="admin-orders-table admin-summary-table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Order lines</th>
-                <th>Adult</th>
-                <th>Youth</th>
-                <th>Child</th>
-                <th>Infant</th>
-                <th>Total tickets</th>
-                <th>Revenue</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Product</th><th>Order lines</th><th>Adult</th><th>Youth</th><th>Child</th><th>Infant</th><th>Total tickets</th><th>Revenue</th></tr></thead>
             <tbody>
               {summary.breakdown.map((row) => (
-                <tr key={row.productId}>
-                  <td>{row.label}</td>
-                  <td>{row.orders}</td>
-                  <td>{row.adults}</td>
-                  <td>{row.youth}</td>
-                  <td>{row.children}</td>
-                  <td>{row.infants}</td>
-                  <td>{row.tickets}</td>
-                  <td>{formatAmount(row.revenue, summary.currency)}</td>
-                </tr>
+                <tr key={row.productId}><td>{row.label}</td><td>{row.orders}</td><td>{row.adults}</td><td>{row.youth}</td><td>{row.children}</td><td>{row.infants}</td><td>{row.tickets}</td><td>{formatAmount(row.revenue, summary.currency)}</td></tr>
               ))}
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
     </section>
   );
 }
