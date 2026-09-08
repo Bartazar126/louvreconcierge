@@ -11,6 +11,10 @@ export function Header() {
   const t = ui[locale];
   const prefix = locale === "en" ? "" : `/${locale}`;
 
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    return null;
+  }
+
   return (
     <div className="header-shell">
       <div className="top-disclaimer">

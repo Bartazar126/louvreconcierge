@@ -1,7 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { business, nonAffiliation } from "@/data/site";
 
 export function Footer() {
+  const pathname = usePathname();
+
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    return null;
+  }
+
   return (
     <footer className="site-footer">
       <div className="container footer-grid">
