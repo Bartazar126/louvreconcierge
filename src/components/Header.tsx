@@ -22,14 +22,13 @@ export function Header() {
       </div>
       <header className="site-header">
         <div className="container header-inner">
-          <Link href={prefix || "/"} className="brand" aria-label="LouvreTickets homepage">
+          <Link href={prefix || "/"} className="brand" aria-label="Tourcierge homepage">
             <span className="brand-text">
-              <strong>LOUVRETICKETS</strong>
-              <span className="brand-byline">by Tourcierge</span>
+              <strong>TOURCIERGE</strong>
             </span>
             <Image
               src="/images/logoLTGnew.png"
-              alt="LouvreTickets logo"
+              alt="Tourcierge logo"
               width={50}
               height={50}
               className="brand-logo"
