@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Product, getProductUnitPrice } from "@/data/site";
 
-const defaultHeroImage = "/images/hero-bg.webp";
+// Az alapkep a CSS-bol jon (.hero-bg-img), hogy mobilon a kisebb
+// valtozat toltodjon - inline style-t csak termekkephez allitunk be.
+const defaultHeroImage = "";
 
 type HeroProductSelectorProps = {
   activeProduct: Product | null;
@@ -53,7 +55,7 @@ export function HeroProductSelector({
     <section id="tickets" className="hero">
       <div
         className={isFading ? "hero-bg-img is-fading" : "hero-bg-img"}
-        style={{ backgroundImage: `url("${heroImage}")` }}
+        style={heroImage ? { backgroundImage: `url("${heroImage}")` } : undefined}
         aria-hidden="true"
       />
       <div className="hero-overlay" />
