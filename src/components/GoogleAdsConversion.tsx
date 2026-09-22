@@ -45,7 +45,7 @@ export function GoogleAdsConversion({
     window.sessionStorage.setItem(dedupeKey, "1");
 
     window.gtag?.("event", "conversion", {
-      send_to: "AW-17788579077/p70GCPmG5M4bEIXaoKJC",
+      send_to: "AW-17788579077/hLpwCMuEuYEdEIXaoKJC",
       value,
       currency,
       transaction_id: transactionId,
