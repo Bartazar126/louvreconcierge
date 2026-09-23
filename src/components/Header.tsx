@@ -27,7 +27,7 @@ export function Header() {
               <strong>TOURCIERGE</strong>
             </span>
             <Image
-              src="/images/logoLTGnew.png"
+              src="/images/tourcierge-key-logo.png"
               alt="Tourcierge logo"
               width={50}
               height={50}
