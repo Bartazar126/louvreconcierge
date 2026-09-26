@@ -17,6 +17,8 @@ type HeroProductSelectorProps = {
     badges: string[];
     select: string;
     from: string;
+    selectCta: string;
+    bestSeller: string;
   };
 };
 
@@ -70,7 +72,7 @@ export function HeroProductSelector({
           <a className="hero-scroll-arrow" href="#booking-area" aria-label="Scroll to booking" />
         </div>
         <div className="ticket-card-row">
-          {products.map((product) => {
+          {products.map((product, index) => {
             const isSelected = product.id === activeProduct?.id;
 
             return (
@@ -81,9 +83,10 @@ export function HeroProductSelector({
                 onClick={() => selectProduct(product)}
                 aria-pressed={isSelected}
               >
-                <span className="ticket-dot" aria-hidden="true" />
+                {index === 0 ? <span className="ticket-badge">{copy.bestSeller}</span> : null}
                 <h3>{product.name}</h3>
                 <p>{copy.from} {getProductUnitPrice(product).toFixed(2)}€</p>
+                <span className="ticket-cta" aria-hidden="true">{copy.selectCta}</span>
               </button>
             );
           })}

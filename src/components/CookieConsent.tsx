@@ -8,6 +8,7 @@ type Preferences = {
 };
 
 const storageKey = "cookie-preferences";
+export const openCookieSettingsEvent = "open-cookie-settings";
 
 declare global {
   interface Window {
@@ -75,6 +76,17 @@ export function CookieConsent() {
     setReady(true);
   }, []);
 
+  // A footer "Cookie settings" gombja ezzel az esemennyel nyitja ujra a bannert.
+  useEffect(() => {
+    const open = () => {
+      setCustomize(true);
+      setVisible(true);
+    };
+
+    window.addEventListener(openCookieSettingsEvent, open);
+    return () => window.removeEventListener(openCookieSettingsEvent, open);
+  }, []);
+
   const save = (next: Preferences) => {
     updateGoogleConsent(next);
     window.localStorage.setItem(
@@ -89,18 +101,7 @@ export function CookieConsent() {
   }
 
   if (!visible) {
-    return (
-      <button
-        type="button"
-        className="cookie-settings-button"
-        onClick={() => {
-          setCustomize(true);
-          setVisible(true);
-        }}
-      >
-        Cookie settings
-      </button>
-    );
+    return null;
   }
 
   return (

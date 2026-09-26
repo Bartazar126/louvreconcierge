@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { openCookieSettingsEvent } from "@/components/CookieConsent";
 import { business, nonAffiliation } from "@/data/site";
 
 export function Footer() {
@@ -50,6 +51,13 @@ export function Footer() {
           <Link href="/payment-policy">Payment Policy</Link>
           <Link href="/privacy-policy">Privacy Policy</Link>
           <Link href="/cookie">Cookie Policy</Link>
+          <button
+            type="button"
+            className="footer-cookie-button"
+            onClick={() => window.dispatchEvent(new Event(openCookieSettingsEvent))}
+          >
+            Cookie settings
+          </button>
           <Link href="/disclaimer">Disclaimer</Link>
         </div>
         <div>
