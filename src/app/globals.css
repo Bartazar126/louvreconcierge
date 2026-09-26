@@ -3223,6 +3223,16 @@ body {
   opacity: 0.65;
 }
 
+/* Termek nelkul a gomb az oldal tetejere, a jegykartyakhoz visz */
+.facade-button:not(:disabled) {
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.facade-button:not(:disabled):hover {
+  filter: brightness(1.1);
+}
+
 .facade-button svg {
   width: 1em;
   height: 1em;

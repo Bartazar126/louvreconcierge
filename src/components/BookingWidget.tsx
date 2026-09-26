@@ -764,7 +764,11 @@ export function BookingWidget({
         <div className="calendar-facade">
           <div className="facade-overlay-content">
             <h4>{copy.selectFirst}</h4>
-            <button type="button" className="facade-button" disabled>
+            <button
+              type="button"
+              className="facade-button"
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            >
               <svg viewBox="0 0 448 512" aria-hidden="true">
                 <path d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zm332.1 142.9L249.5 417.4c-9.4 9.4-24.6 9.4-33.9 0l-77.5-77.5c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0L232.5 366.5l65.6-65.6c9.4-9.4 24.6-9.4 33.9 0s9.4 24.6 0 33.9z" />
               </svg>
