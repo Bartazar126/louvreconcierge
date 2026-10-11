@@ -188,8 +188,8 @@ type BookingWidgetProps = {
 function TermsConsentText() {
   return (
     <span className="checkbox-text">
-      I accept the <Link href="/terms-of-service">Terms of Service</Link>,{" "}
-      <Link href="/privacy-policy">Privacy Policy</Link>, and price breakdown.
+      I accept the <Link href="/terms-of-service">Terms of Service</Link> and{" "}
+      <Link href="/privacy-policy">Privacy Policy</Link>.
     </span>
   );
 }
@@ -923,21 +923,6 @@ export function BookingWidget({
               <span>Combo total</span>
               <strong>EUR {total.toFixed(2)}</strong>
             </div>
-            <div className="quick-price-breakdown">
-              <h3>{copy.breakdown}</h3>
-              <div>
-                <span>Louvre adult</span>
-                <strong>EUR {pricedProduct.faceValue.toFixed(2)} x {louvreAdults}</strong>
-              </div>
-              <div>
-                <span>{product.comboExtraName || "Combo component"}</span>
-                <strong>EUR {comboExtraUnitPrice.toFixed(2)} x {extraPaidVisitors}</strong>
-              </div>
-              <div>
-                <span>Free visitors</span>
-                <strong>{louvreChildren + (isEiffelCombo ? extraInfants : 0)}</strong>
-              </div>
-            </div>
           </div>
 
           <label className="checkbox-row">
@@ -1122,25 +1107,6 @@ export function BookingWidget({
           <div className="quick-total-head">
             <span>{adults} {adults > 1 ? copy.adultTickets : copy.adultTicket}</span>
             <strong>EUR {total.toFixed(2)}</strong>
-          </div>
-          <div className="quick-price-breakdown">
-            <h3>{copy.breakdown}</h3>
-            <div>
-              <span>{copy.faceValue}</span>
-              <strong>EUR {pricedProduct.faceValue.toFixed(2)} x {payingVisitors}</strong>
-            </div>
-            <div>
-              <span>{copy.eGuideFee}</span>
-              <strong>EUR {pricedProduct.eGuideFee.toFixed(2)} x {payingVisitors}</strong>
-            </div>
-            <div>
-              <span>{copy.serviceFee}</span>
-              <strong>EUR {pricedProduct.serviceFee.toFixed(2)} x {payingVisitors}</strong>
-            </div>
-            <div>
-              <span>{copy.childrenLabel}</span>
-              <strong>EUR 0.00 x {children}</strong>
-            </div>
           </div>
         </div>
 
